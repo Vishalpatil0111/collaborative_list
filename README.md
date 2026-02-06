@@ -222,19 +222,8 @@ Search notes by title and content
 - **Auth**: Required
 - **Returns**: Array of matching notes
 
-### Activity Endpoints
 
-#### GET /api/activity
-Get activity logs
-- **Auth**: Required (Admin only)
-- **Returns**: Array of activity logs
 
-## 🔐 Role-Based Access Control
-
-### Roles
-- **Viewer**: Can only view notes they have access to
-- **Editor**: Can create, edit, and delete their own notes
-- **Admin**: Full access including activity logs
 
 ### Permissions
 - **Create Notes**: Editor, Admin

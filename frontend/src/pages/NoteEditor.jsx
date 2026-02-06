@@ -135,11 +135,25 @@ const NoteEditor = () => {
   };
 
   if (loading) {
-    return <div className="container">Loading...</div>;
+    return (
+      <div className="container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>📝</div>
+          <p style={{ color: 'white', fontSize: '18px', fontWeight: '600' }}>Loading note...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!note) {
-    return <div className="container">Note not found</div>;
+    return (
+      <div className="container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>❌</div>
+          <p style={{ color: 'white', fontSize: '18px', fontWeight: '600' }}>Note not found</p>
+        </div>
+      </div>
+    );
   }
 
   const canEdit = note.owner_id === user?.id || user?.role === 'editor';
@@ -148,16 +162,21 @@ const NoteEditor = () => {
     <div className="container">
       <div className="editor-container">
         <div className="editor-header">
-          <div>
-            <button onClick={() => navigate('/dashboard')} className="btn btn-secondary">
-              ← Back to Dashboard
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <button onClick={() => navigate('/dashboard')} className="btn btn-secondary" style={{ padding: '10px 20px' }}>
+              ← Back
             </button>
-            {saving && <span style={{ marginLeft: '15px', color: '#666' }}>Saving...</span>}
+            {saving && (
+              <span style={{ color: '#667eea', fontWeight: '600', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span className="saving-spinner"></span>
+                Saving...
+              </span>
+            )}
           </div>
           <div>
             {note.owner_id === user?.id && (
-              <button onClick={shareNote} className="btn btn-primary">
-                Share Note
+              <button onClick={shareNote} className="btn btn-primary" style={{ padding: '10px 20px' }}>
+                🔗 Share Note
               </button>
             )}
           </div>
@@ -169,15 +188,17 @@ const NoteEditor = () => {
               type="text"
               value={title}
               onChange={handleTitleChange}
-              placeholder="Note title..."
+              placeholder="✍️ Untitled note..."
               disabled={!canEdit}
               style={{ 
-                fontSize: '24px', 
-                fontWeight: 'bold', 
+                fontSize: '32px', 
+                fontWeight: '800', 
                 border: 'none', 
                 outline: 'none',
                 width: '100%',
-                marginBottom: '20px'
+                marginBottom: '24px',
+                background: 'transparent',
+                color: '#1a202c'
               }}
             />
           </div>
@@ -186,59 +207,68 @@ const NoteEditor = () => {
             <textarea
               value={content}
               onChange={handleContentChange}
-              placeholder="Start writing your note..."
+              placeholder="Start writing your note... \n\nYou can collaborate with others in real-time!"
               disabled={!canEdit}
+              style={{
+                minHeight: '500px',
+                fontSize: '16px',
+                lineHeight: '1.8',
+                border: 'none',
+                background: 'transparent',
+                resize: 'vertical'
+              }}
             />
           </div>
           
           {!canEdit && (
-            <div style={{ color: '#666', fontStyle: 'italic', marginTop: '10px' }}>
-              You have read-only access to this note.
+            <div style={{ 
+              color: '#718096', 
+              fontStyle: 'italic', 
+              marginTop: '16px',
+              padding: '12px 16px',
+              background: '#f7fafc',
+              borderRadius: '8px',
+              borderLeft: '4px solid #667eea'
+            }}>
+              🔒 You have read-only access to this note.
             </div>
           )}
         </div>
       </div>
 
       {showShareUrl && (
-        <div style={{ 
-          position: 'fixed', 
-          top: 0, 
-          left: 0, 
-          right: 0, 
-          bottom: 0, 
-          background: 'rgba(0,0,0,0.5)', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center' 
-        }}>
-          <div style={{ 
-            background: 'white', 
-            padding: '30px', 
-            borderRadius: '8px', 
-            maxWidth: '500px', 
-            width: '90%' 
-          }}>
-            <h3>Share Note</h3>
-            <p>Anyone with this link can view your note (read-only):</p>
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3>🔗 Share Your Note</h3>
+            <p style={{ color: '#718096', marginBottom: '20px', lineHeight: '1.6' }}>
+              Anyone with this link can view your note in read-only mode:
+            </p>
             <div style={{ 
               display: 'flex', 
-              gap: '10px', 
-              marginTop: '15px', 
-              marginBottom: '20px' 
+              gap: '12px', 
+              marginBottom: '24px' 
             }}>
               <input 
                 type="text" 
                 value={shareUrl} 
                 readOnly 
-                style={{ flex: 1 }}
+                style={{ 
+                  flex: 1,
+                  padding: '12px 16px',
+                  background: '#f7fafc',
+                  border: '2px solid #e2e8f0',
+                  borderRadius: '12px',
+                  fontSize: '14px'
+                }}
               />
-              <button onClick={copyShareUrl} className="btn btn-primary">
-                Copy
+              <button onClick={copyShareUrl} className="btn btn-primary" style={{ margin: 0, padding: '12px 24px' }}>
+                📋 Copy
               </button>
             </div>
             <button 
               onClick={() => setShowShareUrl(false)} 
               className="btn btn-secondary"
+              style={{ width: '100%', margin: 0 }}
             >
               Close
             </button>

@@ -28,7 +28,8 @@ const Login = () => {
 
   return (
     <div className="auth-form">
-      <h2 style={{ textAlign: 'center', marginBottom: '30px' }}>Login</h2>
+      <h2 style={{ textAlign: 'center' }}>Welcome Back</h2>
+      <p className="subtitle" style={{ textAlign: 'center' }}>Sign in to continue to your notes</p>
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label>Email</label>
@@ -49,12 +50,12 @@ const Login = () => {
           />
         </div>
         {error && <div className="error">{error}</div>}
-        <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: '100%', marginTop: '20px' }}>
-          {loading ? 'Logging in...' : 'Login'}
+        <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: '100%', marginTop: '24px' }}>
+          {loading ? 'Signing in...' : 'Sign In'}
         </button>
       </form>
-      <p style={{ textAlign: 'center', marginTop: '20px' }}>
-        Don't have an account? <Link to="/register">Register</Link>
+      <p style={{ textAlign: 'center', marginTop: '24px', color: '#718096', fontSize: '14px' }}>
+        Don't have an account? <Link to="/register" className="link-text">Create one</Link>
       </p>
     </div>
   );
