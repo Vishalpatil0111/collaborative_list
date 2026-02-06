@@ -4,8 +4,8 @@ A production-quality full-stack web application that allows multiple users to cr
 
 ## 🚀 Live Demo
 
-- **Frontend**: [Deployed on Vercel/Netlify]
-- **Backend**: [Deployed on Railway/Render]
+- **Frontend**: Deployed on Vercel
+- **Backend**: Deployed on Render
 
 ## 🏗️ Architecture
 
