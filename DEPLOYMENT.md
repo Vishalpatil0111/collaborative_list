@@ -127,8 +127,3 @@ For production use, consider:
 - Load balancing for multiple backend instances
 - Database indexing for better search performance
 
----
-
-**Estimated Deployment Time: 15-30 minutes**
-
-Need help? Check the main README.md for detailed setup instructions.

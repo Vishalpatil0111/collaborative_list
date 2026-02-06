@@ -162,7 +162,7 @@ const NoteEditor = () => {
     <div className="container">
       <div className="editor-container">
         <div className="editor-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
             <button onClick={() => navigate('/dashboard')} className="btn btn-secondary" style={{ padding: '10px 20px' }}>
               ← Back
             </button>
@@ -246,7 +246,8 @@ const NoteEditor = () => {
             <div style={{ 
               display: 'flex', 
               gap: '12px', 
-              marginBottom: '24px' 
+              marginBottom: '24px',
+              flexWrap: 'wrap'
             }}>
               <input 
                 type="text" 

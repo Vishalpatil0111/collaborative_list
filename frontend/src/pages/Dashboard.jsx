@@ -79,7 +79,7 @@ const Dashboard = () => {
       <div className="header">
         <div className="header-content">
           <h1>✨ Collaborative Notes</h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
             <input
               type="text"
               placeholder="🔍 Search notes..."
@@ -96,7 +96,7 @@ const Dashboard = () => {
       </div>
 
       <div className="container">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px', flexWrap: 'wrap', gap: '16px' }}>
           <h2 style={{ fontSize: '28px', fontWeight: '700', color: '#1a202c' }}>📝 Your Notes</h2>
           {user?.role !== 'viewer' && (
             <button 
@@ -128,6 +128,7 @@ const Dashboard = () => {
                 type="button" 
                 onClick={() => setShowCreateForm(false)} 
                 className="btn btn-secondary"
+                style={{ marginTop: '0' }}
               >
                 Cancel
               </button>
