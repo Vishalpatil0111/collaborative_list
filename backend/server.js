@@ -16,11 +16,15 @@ const server = createServer(app);
 const io = new Server(server, {
   cors: {
     origin: process.env.FRONTEND_URL || "http://localhost:3000",
-    methods: ["GET", "POST"]
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true
   }
 });
 
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || "http://localhost:3000",
+  credentials: true
+}));
 app.use(express.json());
 
 // Initialize database
@@ -250,13 +254,21 @@ app.get('/api/activity', authenticateToken, checkPermission('admin'), async (req
 // Add collaborator to note
 app.post('/api/notes/:id/collaborators', authenticateToken, async (req, res) => {
   try {
-    const { email, permission = 'viewer' } = req.body;
+    console.log('Add collaborator request:', { noteId: req.params.id, body: req.body, userId: req.user.id });
+    
+    const { email, permission = 'editor' } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
     
     // Check if user is note owner
     const noteCheck = await pool.query(
       'SELECT * FROM notes WHERE id = $1 AND owner_id = $2',
       [req.params.id, req.user.id]
     );
+    
+    console.log('Note check result:', noteCheck.rows.length);
     
     if (noteCheck.rows.length === 0) {
       return res.status(403).json({ error: 'Only note owner can add collaborators' });
@@ -267,6 +279,8 @@ app.post('/api/notes/:id/collaborators', authenticateToken, async (req, res) => 
       'SELECT id, name, email FROM users WHERE email = $1',
       [email]
     );
+    
+    console.log('User search result:', userResult.rows.length);
     
     if (userResult.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
@@ -280,8 +294,11 @@ app.post('/api/notes/:id/collaborators', authenticateToken, async (req, res) => 
       [req.params.id, collaboratorId, permission]
     );
     
+    console.log('Collaborator added successfully');
+    
     res.json({ message: 'Collaborator added', user: userResult.rows[0] });
   } catch (error) {
+    console.error('Error adding collaborator:', error);
     res.status(500).json({ error: error.message });
   }
 });
