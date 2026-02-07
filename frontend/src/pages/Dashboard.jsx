@@ -94,7 +94,10 @@ const Dashboard = () => {
                 📊 Activity
               </button>
             )}
-            <div className="user-badge">👤 {user?.name}</div>
+            <div className="user-badge">
+              👤 {user?.name}
+              {user?.role === 'admin' && <span style={{ marginLeft: '6px', fontSize: '10px', padding: '2px 6px', background: '#667eea', borderRadius: '4px' }}>ADMIN</span>}
+            </div>
             <button onClick={logout} className="btn btn-secondary" style={{ padding: '12px 20px' }}>Logout</button>
           </div>
         </div>
@@ -155,7 +158,21 @@ const Dashboard = () => {
                   onClick={() => navigate(`/note/${note.id}`)}
                   style={{ cursor: 'pointer' }}
                 >
-                  <div className="note-title">{note.title}</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                    <div className="note-title">{note.title}</div>
+                    {note.owner_id !== user?.id && (
+                      <span style={{ 
+                        fontSize: '11px', 
+                        padding: '4px 8px', 
+                        background: '#e2e8f0', 
+                        borderRadius: '6px',
+                        color: '#4a5568',
+                        fontWeight: '600'
+                      }}>
+                        {note.owner_name}
+                      </span>
+                    )}
+                  </div>
                   <div className="note-preview">
                     {note.content ? note.content.substring(0, 120) + '...' : '✍️ No content yet'}
                   </div>
@@ -164,7 +181,7 @@ const Dashboard = () => {
                     <span>{new Date(note.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                   </div>
                 </div>
-                {note.owner_id === user?.id && (
+                {(note.owner_id === user?.id || user?.role === 'admin') && (
                   <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #f7fafc' }}>
                     <button 
                       onClick={(e) => {

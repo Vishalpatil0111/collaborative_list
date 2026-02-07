@@ -27,7 +27,6 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Initialize database
 await initDB();
 
 // Auth Routes
@@ -65,19 +64,28 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// Notes Routes
+// Notes Routes - Admin can see ALL notes
 app.get('/api/notes', authenticateToken, async (req, res) => {
   try {
-    const result = await pool.query(`
-      SELECT DISTINCT n.*, u.name as owner_name 
-      FROM notes n 
-      JOIN users u ON n.owner_id = u.id 
-      LEFT JOIN note_collaborators nc ON n.id = nc.note_id 
-      WHERE n.owner_id = $1 OR nc.user_id = $1
-      ORDER BY n.updated_at DESC
-    `, [req.user.id]);
-    
-    res.json(result.rows);
+    if (req.user.role === 'admin') {
+      const result = await pool.query(`
+        SELECT DISTINCT n.*, u.name as owner_name 
+        FROM notes n 
+        JOIN users u ON n.owner_id = u.id 
+        ORDER BY n.updated_at DESC
+      `);
+      res.json(result.rows);
+    } else {
+      const result = await pool.query(`
+        SELECT DISTINCT n.*, u.name as owner_name 
+        FROM notes n 
+        JOIN users u ON n.owner_id = u.id 
+        LEFT JOIN note_collaborators nc ON n.id = nc.note_id 
+        WHERE n.owner_id = $1 OR nc.user_id = $1
+        ORDER BY n.updated_at DESC
+      `, [req.user.id]);
+      res.json(result.rows);
+    }
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -104,34 +112,57 @@ app.post('/api/notes', authenticateToken, checkPermission('editor'), async (req,
   }
 });
 
+// Admin can access ANY note
 app.get('/api/notes/:id', authenticateToken, async (req, res) => {
   try {
-    const result = await pool.query(`
-      SELECT n.*, u.name as owner_name 
-      FROM notes n 
-      JOIN users u ON n.owner_id = u.id 
-      LEFT JOIN note_collaborators nc ON n.id = nc.note_id 
-      WHERE n.id = $1 AND (n.owner_id = $2 OR nc.user_id = $2)
-    `, [req.params.id, req.user.id]);
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Note not found' });
+    if (req.user.role === 'admin') {
+      const result = await pool.query(`
+        SELECT n.*, u.name as owner_name 
+        FROM notes n 
+        JOIN users u ON n.owner_id = u.id 
+        WHERE n.id = $1
+      `, [req.params.id]);
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Note not found' });
+      }
+      res.json(result.rows[0]);
+    } else {
+      const result = await pool.query(`
+        SELECT n.*, u.name as owner_name 
+        FROM notes n 
+        JOIN users u ON n.owner_id = u.id 
+        LEFT JOIN note_collaborators nc ON n.id = nc.note_id 
+        WHERE n.id = $1 AND (n.owner_id = $2 OR nc.user_id = $2)
+      `, [req.params.id, req.user.id]);
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Note not found' });
+      }
+      res.json(result.rows[0]);
     }
-    
-    res.json(result.rows[0]);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
+// Admin can edit ANY note
 app.put('/api/notes/:id', authenticateToken, async (req, res) => {
   try {
     const { title, content } = req.body;
     
-    const result = await pool.query(
-      'UPDATE notes SET title = $1, content = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND owner_id = $4 RETURNING *',
-      [title, content, req.params.id, req.user.id]
-    );
+    let result;
+    if (req.user.role === 'admin') {
+      result = await pool.query(
+        'UPDATE notes SET title = $1, content = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 RETURNING *',
+        [title, content, req.params.id]
+      );
+    } else {
+      result = await pool.query(
+        'UPDATE notes SET title = $1, content = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND owner_id = $4 RETURNING *',
+        [title, content, req.params.id, req.user.id]
+      );
+    }
     
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Note not found or unauthorized' });
@@ -142,21 +173,25 @@ app.put('/api/notes/:id', authenticateToken, async (req, res) => {
       [req.user.id, req.params.id, 'update']
     );
     
-    // Emit real-time update
     io.to(`note-${req.params.id}`).emit('noteUpdated', result.rows[0]);
-    
     res.json(result.rows[0]);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
+// Admin can delete ANY note
 app.delete('/api/notes/:id', authenticateToken, async (req, res) => {
   try {
-    const result = await pool.query(
-      'DELETE FROM notes WHERE id = $1 AND owner_id = $2 RETURNING *',
-      [req.params.id, req.user.id]
-    );
+    let result;
+    if (req.user.role === 'admin') {
+      result = await pool.query('DELETE FROM notes WHERE id = $1 RETURNING *', [req.params.id]);
+    } else {
+      result = await pool.query(
+        'DELETE FROM notes WHERE id = $1 AND owner_id = $2 RETURNING *',
+        [req.params.id, req.user.id]
+      );
+    }
     
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Note not found or unauthorized' });
@@ -173,7 +208,6 @@ app.delete('/api/notes/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Public note access
 app.get('/api/public/:publicId', async (req, res) => {
   try {
     const result = await pool.query(
@@ -213,7 +247,6 @@ app.post('/api/notes/:id/share', authenticateToken, async (req, res) => {
   }
 });
 
-// Search
 app.get('/api/search', authenticateToken, async (req, res) => {
   try {
     const { q } = req.query;
@@ -233,7 +266,6 @@ app.get('/api/search', authenticateToken, async (req, res) => {
   }
 });
 
-// Activity logs
 app.get('/api/activity', authenticateToken, checkPermission('admin'), async (req, res) => {
   try {
     const result = await pool.query(`
@@ -251,36 +283,33 @@ app.get('/api/activity', authenticateToken, checkPermission('admin'), async (req
   }
 });
 
-// Add collaborator to note
+// Admin can add collaborators to ANY note
 app.post('/api/notes/:id/collaborators', authenticateToken, async (req, res) => {
   try {
-    console.log('Add collaborator request:', { noteId: req.params.id, body: req.body, userId: req.user.id });
-    
     const { email, permission = 'editor' } = req.body;
     
     if (!email) {
       return res.status(400).json({ error: 'Email is required' });
     }
     
-    // Check if user is note owner
-    const noteCheck = await pool.query(
-      'SELECT * FROM notes WHERE id = $1 AND owner_id = $2',
-      [req.params.id, req.user.id]
-    );
-    
-    console.log('Note check result:', noteCheck.rows.length);
+    let noteCheck;
+    if (req.user.role === 'admin') {
+      noteCheck = await pool.query('SELECT * FROM notes WHERE id = $1', [req.params.id]);
+    } else {
+      noteCheck = await pool.query(
+        'SELECT * FROM notes WHERE id = $1 AND owner_id = $2',
+        [req.params.id, req.user.id]
+      );
+    }
     
     if (noteCheck.rows.length === 0) {
       return res.status(403).json({ error: 'Only note owner can add collaborators' });
     }
     
-    // Find user by email
     const userResult = await pool.query(
       'SELECT id, name, email FROM users WHERE email = $1',
       [email]
     );
-    
-    console.log('User search result:', userResult.rows.length);
     
     if (userResult.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
@@ -288,22 +317,17 @@ app.post('/api/notes/:id/collaborators', authenticateToken, async (req, res) => 
     
     const collaboratorId = userResult.rows[0].id;
     
-    // Add collaborator
     await pool.query(
       'INSERT INTO note_collaborators (note_id, user_id, permission) VALUES ($1, $2, $3) ON CONFLICT (note_id, user_id) DO UPDATE SET permission = $3',
       [req.params.id, collaboratorId, permission]
     );
     
-    console.log('Collaborator added successfully');
-    
     res.json({ message: 'Collaborator added', user: userResult.rows[0] });
   } catch (error) {
-    console.error('Error adding collaborator:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Get collaborators for a note
 app.get('/api/notes/:id/collaborators', authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(`
@@ -319,14 +343,17 @@ app.get('/api/notes/:id/collaborators', authenticateToken, async (req, res) => {
   }
 });
 
-// Remove collaborator
 app.delete('/api/notes/:id/collaborators/:userId', authenticateToken, async (req, res) => {
   try {
-    // Check if user is note owner
-    const noteCheck = await pool.query(
-      'SELECT * FROM notes WHERE id = $1 AND owner_id = $2',
-      [req.params.id, req.user.id]
-    );
+    let noteCheck;
+    if (req.user.role === 'admin') {
+      noteCheck = await pool.query('SELECT * FROM notes WHERE id = $1', [req.params.id]);
+    } else {
+      noteCheck = await pool.query(
+        'SELECT * FROM notes WHERE id = $1 AND owner_id = $2',
+        [req.params.id, req.user.id]
+      );
+    }
     
     if (noteCheck.rows.length === 0) {
       return res.status(403).json({ error: 'Only note owner can remove collaborators' });
@@ -343,7 +370,6 @@ app.delete('/api/notes/:id/collaborators/:userId', authenticateToken, async (req
   }
 });
 
-// Socket.io for real-time collaboration
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
   
