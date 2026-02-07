@@ -7,6 +7,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import NoteEditor from './pages/NoteEditor';
 import PublicNote from './pages/PublicNote';
+import ActivityLogs from './pages/ActivityLogs';
 
 function App() {
   return (
@@ -24,6 +25,11 @@ function App() {
           <Route path="/note/:id" element={
             <ProtectedRoute>
               <NoteEditor />
+            </ProtectedRoute>
+          } />
+          <Route path="/activity" element={
+            <ProtectedRoute>
+              <ActivityLogs />
             </ProtectedRoute>
           } />
           <Route path="/" element={<Navigate to="/dashboard" />} />

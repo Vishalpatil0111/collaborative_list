@@ -17,6 +17,10 @@ const NoteEditor = () => {
   const [saving, setSaving] = useState(false);
   const [shareUrl, setShareUrl] = useState('');
   const [showShareUrl, setShowShareUrl] = useState(false);
+  const [showCollaborators, setShowCollaborators] = useState(false);
+  const [collaborators, setCollaborators] = useState([]);
+  const [newCollaboratorEmail, setNewCollaboratorEmail] = useState('');
+  const [addingCollaborator, setAddingCollaborator] = useState(false);
   
   const saveTimeoutRef = useRef(null);
   const lastSavedRef = useRef({ title: '', content: '' });
@@ -63,11 +67,25 @@ const NoteEditor = () => {
       setTitle(noteData.title);
       setContent(noteData.content);
       lastSavedRef.current = { title: noteData.title, content: noteData.content };
+      
+      // Fetch collaborators if owner
+      if (noteData.owner_id === user?.id) {
+        fetchCollaborators();
+      }
     } catch (error) {
       console.error('Error fetching note:', error);
       navigate('/dashboard');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCollaborators = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/notes/${id}/collaborators`);
+      setCollaborators(response.data);
+    } catch (error) {
+      console.error('Error fetching collaborators:', error);
     }
   };
 
@@ -134,6 +152,37 @@ const NoteEditor = () => {
     alert('Share URL copied to clipboard!');
   };
 
+  const addCollaborator = async (e) => {
+    e.preventDefault();
+    if (!newCollaboratorEmail.trim()) return;
+    
+    setAddingCollaborator(true);
+    try {
+      await axios.post(`${API_URL}/api/notes/${id}/collaborators`, {
+        email: newCollaboratorEmail,
+        permission: 'editor'
+      });
+      setNewCollaboratorEmail('');
+      fetchCollaborators();
+      alert('Collaborator added successfully!');
+    } catch (error) {
+      alert(error.response?.data?.error || 'Failed to add collaborator');
+    } finally {
+      setAddingCollaborator(false);
+    }
+  };
+
+  const removeCollaborator = async (userId) => {
+    if (!confirm('Remove this collaborator?')) return;
+    
+    try {
+      await axios.delete(`${API_URL}/api/notes/${id}/collaborators/${userId}`);
+      fetchCollaborators();
+    } catch (error) {
+      alert('Failed to remove collaborator');
+    }
+  };
+
   if (loading) {
     return (
       <div className="container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
@@ -175,9 +224,14 @@ const NoteEditor = () => {
           </div>
           <div>
             {note.owner_id === user?.id && (
-              <button onClick={shareNote} className="btn btn-primary" style={{ padding: '10px 20px' }}>
-                🔗 Share Note
-              </button>
+              <>
+                <button onClick={() => setShowCollaborators(true)} className="btn btn-secondary" style={{ padding: '10px 20px', marginRight: '10px' }}>
+                  👥 Collaborators ({collaborators.length})
+                </button>
+                <button onClick={shareNote} className="btn btn-primary" style={{ padding: '10px 20px' }}>
+                  🔗 Share Note
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -268,6 +322,84 @@ const NoteEditor = () => {
             </div>
             <button 
               onClick={() => setShowShareUrl(false)} 
+              className="btn btn-secondary"
+              style={{ width: '100%', margin: 0 }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showCollaborators && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3>👥 Manage Collaborators</h3>
+            <p style={{ color: '#718096', marginBottom: '20px' }}>
+              Share this note with other users by adding their email:
+            </p>
+            
+            <form onSubmit={addCollaborator} style={{ marginBottom: '24px' }}>
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                <input
+                  type="email"
+                  placeholder="Enter user email..."
+                  value={newCollaboratorEmail}
+                  onChange={(e) => setNewCollaboratorEmail(e.target.value)}
+                  style={{
+                    flex: 1,
+                    padding: '12px 16px',
+                    border: '2px solid #e2e8f0',
+                    borderRadius: '12px',
+                    fontSize: '14px'
+                  }}
+                  required
+                />
+                <button 
+                  type="submit" 
+                  className="btn btn-primary" 
+                  disabled={addingCollaborator}
+                  style={{ margin: 0, padding: '12px 24px' }}
+                >
+                  {addingCollaborator ? 'Adding...' : '➕ Add'}
+                </button>
+              </div>
+            </form>
+
+            {collaborators.length > 0 && (
+              <div style={{ marginBottom: '20px' }}>
+                <h4 style={{ fontSize: '16px', marginBottom: '12px', color: '#2d3748' }}>Current Collaborators:</h4>
+                {collaborators.map((collab) => (
+                  <div 
+                    key={collab.id} 
+                    style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      padding: '12px',
+                      background: '#f7fafc',
+                      borderRadius: '8px',
+                      marginBottom: '8px'
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: '600', color: '#1a202c' }}>{collab.name}</div>
+                      <div style={{ fontSize: '13px', color: '#718096' }}>{collab.email}</div>
+                    </div>
+                    <button
+                      onClick={() => removeCollaborator(collab.id)}
+                      className="btn btn-danger"
+                      style={{ fontSize: '12px', padding: '6px 12px', margin: 0 }}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <button 
+              onClick={() => setShowCollaborators(false)} 
               className="btn btn-secondary"
               style={{ width: '100%', margin: 0 }}
             >

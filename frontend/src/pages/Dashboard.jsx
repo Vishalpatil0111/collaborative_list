@@ -89,6 +89,11 @@ const Dashboard = () => {
               onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
             />
             <button onClick={handleSearch} className="btn btn-secondary" style={{ padding: '12px 20px' }}>Search</button>
+            {user?.role === 'admin' && (
+              <button onClick={() => navigate('/activity')} className="btn btn-secondary" style={{ padding: '12px 20px' }}>
+                📊 Activity
+              </button>
+            )}
             <div className="user-badge">👤 {user?.name}</div>
             <button onClick={logout} className="btn btn-secondary" style={{ padding: '12px 20px' }}>Logout</button>
           </div>

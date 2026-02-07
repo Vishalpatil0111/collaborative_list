@@ -247,6 +247,85 @@ app.get('/api/activity', authenticateToken, checkPermission('admin'), async (req
   }
 });
 
+// Add collaborator to note
+app.post('/api/notes/:id/collaborators', authenticateToken, async (req, res) => {
+  try {
+    const { email, permission = 'viewer' } = req.body;
+    
+    // Check if user is note owner
+    const noteCheck = await pool.query(
+      'SELECT * FROM notes WHERE id = $1 AND owner_id = $2',
+      [req.params.id, req.user.id]
+    );
+    
+    if (noteCheck.rows.length === 0) {
+      return res.status(403).json({ error: 'Only note owner can add collaborators' });
+    }
+    
+    // Find user by email
+    const userResult = await pool.query(
+      'SELECT id, name, email FROM users WHERE email = $1',
+      [email]
+    );
+    
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    const collaboratorId = userResult.rows[0].id;
+    
+    // Add collaborator
+    await pool.query(
+      'INSERT INTO note_collaborators (note_id, user_id, permission) VALUES ($1, $2, $3) ON CONFLICT (note_id, user_id) DO UPDATE SET permission = $3',
+      [req.params.id, collaboratorId, permission]
+    );
+    
+    res.json({ message: 'Collaborator added', user: userResult.rows[0] });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get collaborators for a note
+app.get('/api/notes/:id/collaborators', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT u.id, u.name, u.email, nc.permission, nc.added_at
+      FROM note_collaborators nc
+      JOIN users u ON nc.user_id = u.id
+      WHERE nc.note_id = $1
+    `, [req.params.id]);
+    
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Remove collaborator
+app.delete('/api/notes/:id/collaborators/:userId', authenticateToken, async (req, res) => {
+  try {
+    // Check if user is note owner
+    const noteCheck = await pool.query(
+      'SELECT * FROM notes WHERE id = $1 AND owner_id = $2',
+      [req.params.id, req.user.id]
+    );
+    
+    if (noteCheck.rows.length === 0) {
+      return res.status(403).json({ error: 'Only note owner can remove collaborators' });
+    }
+    
+    await pool.query(
+      'DELETE FROM note_collaborators WHERE note_id = $1 AND user_id = $2',
+      [req.params.id, req.params.userId]
+    );
+    
+    res.json({ message: 'Collaborator removed' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Socket.io for real-time collaboration
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
